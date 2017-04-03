@@ -21,13 +21,14 @@ public class Target : MonoBehaviour {
 
     void OnTriggerEnter(Collider col)
     {
-        Debug.Log(col.gameObject.tag);
+        //Debug.Log(col.gameObject.tag);
         if(col.gameObject.tag == "fpBullet")
         {
 
             if (gameObject.tag == "Blue Switch") {
                 foreach (GameObject gO in GameObject.FindGameObjectsWithTag("Blue Door"))
                 {
+                    Destroy(gO.transform.parent.gameObject);
                     //Debug.Log("Hit Blue!");
                     Destroy(gO);
                 }

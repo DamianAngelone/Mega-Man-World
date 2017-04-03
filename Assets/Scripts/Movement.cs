@@ -1,13 +1,17 @@
 ﻿using System;
 using UnityEngine;
+using System.Collections.Generic;
 
-public class Movement : MonoBehaviour {
+public class Movement : MonoBehaviour
+{
 
     public bool checkPOV;
     public bool isGrounded;
     public bool isJumping;
     public bool isMoving;
     public bool activeDJ;
+    public bool isHealing;
+    public bool touchingWall;
     public bool isDJumping = false;
     public Animator anim;
     bool stop = true;
@@ -21,12 +25,18 @@ public class Movement : MonoBehaviour {
     public float doubleJumpForce;
     public bool isRight;
 
+    public int numberOfCol = 0;
+
     public bool inCutscene;
 
     public bool perspectiveSwitchValid;
 
+
+    private List<GameObject> GOs = new List<GameObject>();
+
     // Use this for initialization
-    void Start () {
+    void Start()
+    {
 
         inCutscene = true;
         checkPOV = false;
@@ -38,9 +48,14 @@ public class Movement : MonoBehaviour {
     // Update is called once per frame
     void Update()
     {
+
+        perspectiveSwitchValid = checkFpFloor();
         Vector3 thePos = transform.localPosition;
         Vector3 theScale = transform.localScale;
         Quaternion theRotation = transform.localRotation;
+
+        if (numberOfCol == 0)
+            isJumping = true;
 
         if (!GetComponent<TimerForPerspective>().gameOverState && !GetComponent<TimerForPerspective>().winState && !GetComponent<Movement>().inCutscene)
         {
@@ -209,10 +224,11 @@ public class Movement : MonoBehaviour {
         }
     }
 
-    void FixedUpdate() {
+    void FixedUpdate()
+    {
 
-        
-        if(!checkPOV)
+
+        if (!checkPOV)
         {
             if (rb.velocity.sqrMagnitude < 1)
                 rb.AddForce(new Vector3(sideSpd, jumpForce + (activeDJ ? doubleJumpForce : 0), 0), ForceMode.Impulse);
@@ -225,17 +241,48 @@ public class Movement : MonoBehaviour {
         activeDJ = false;
     }
 
-    void OnCollisionEnter(Collision col){
+    public bool checkFpFloor()
+    {
+        for (int i = 0; i < GOs.Count; i++)
+        {
+            if (GOs[i].tag == "fpFloor")
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    void OnCollisionEnter(Collision col)
+    {
+
+        numberOfCol++;
+        GOs.Add(col.gameObject);
 
         //Debug.Log("You hit something: " + col.collider.tag);
 
-        if (col.collider.tag != "fpFloor")
+        /*if (col.collider.tag == "Wall" || col.collider.tag == "fp Wall")
+            touchingWall = true;
+
+        else
+            touchingWall = false;*/
+
+        if (col.collider.tag == "Wind")
+            isJumping = true;
+
+        /*
+        if (col.collider.tag == "fpFloor" && touchingWall)
+        {
+            perspectiveSwitchValid = false;
+        }
+
+        else if (col.collider.tag != "fpFloor")
             perspectiveSwitchValid = true;
 
         else
-            perspectiveSwitchValid = false;
+            perspectiveSwitchValid = false;*/
 
-        if (col.collider.tag == "Ground" && inCutscene)
+        if ((col.collider.tag == "Ground" || col.collider.tag == "fpFloor") && inCutscene)
         {
             anim.SetTrigger("start");
             inCutscene = false;
@@ -245,10 +292,11 @@ public class Movement : MonoBehaviour {
         {
             sideSpd = 0;
             jumpForce = 0;
-            GetComponent<TimerForPerspective>().health = 0;
+
             GetComponent<TimerForPerspective>().gameOverState = true;
 
             stop = false;
+            //GetComponent<TimerForPerspective>().health = 0;
         }
 
         if (col.collider.tag == "Victory" && stop)
@@ -260,23 +308,35 @@ public class Movement : MonoBehaviour {
             stop = false;
         }
 
-            if (col.collider.tag == "Ground" || col.collider.tag == "fpFloor")
+        if (col.collider.tag == "Ground" || col.collider.tag == "fpFloor" || col.collider.tag == "energyFloor")
         {
             isGrounded = true;
             isJumping = false;
             isDJumping = false;
         }
+
+        if (col.collider.tag == "energyFloor")
+        {
+            isHealing = true;
+        }
     }
 
     void OnCollisionExit(Collision col)
     {
+        numberOfCol--;
+        GOs.Remove(col.gameObject);
 
         //Debug.Log("You left something: " + col.collider.tag);
-        if (col.collider.tag == "Ground" || col.collider.tag == "fpFloor")
+        if (col.collider.tag == "Ground" || col.collider.tag == "fpFloor" || col.collider.tag == "energyFloor")
         {
             isGrounded = false;
             jumpForce = 0;
             doubleJumpForce = 0;
+        }
+
+        if (col.collider.tag == "energyFloor")
+        {
+            isHealing = false;
         }
     }
 
@@ -290,6 +350,7 @@ public class Movement : MonoBehaviour {
         activeDJ = true;
         //jumpForce = 0;
         rb.AddForce(new Vector2(0, 150));
+        jumpForce = 0;
         isDJumping = true;
     }
 }
